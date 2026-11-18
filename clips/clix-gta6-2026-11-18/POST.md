@@ -2,7 +2,7 @@
 
 Stream: https://www.twitch.tv/videos/2932204601
 
-3 h 55 min of stream -> 4 clip(s) in 21 min (look up 2 s, download audio 1 min, listen 12 min, pick 1 min, make clips 6 min)
+3 h 55 min of stream -> 4 clip(s) in 6 min (look up 0 s, download audio 0 s, listen 0 s, pick 0 s, make clips 6 min)
 
 ## 01_gta-6-launch-countdown-hits-zero.mp4
 **Clix counts down the LAST SECONDS until GTA 6 😭** · first_reaction · 49 s · score 82
@@ -48,6 +48,6 @@ The moment the cutscene ended and it was REAL 😭 how long did you wait for thi
 #gta6 #gtavi #clix #gta6gameplay #fyp
 
 _Why: The 'wait, can I move?' turns straight into screaming 'I'm playing', the first-ever-control moment GTA fans have waited over a decade to feel._
-_From the stream at 0:34:18_
+_From the stream at 0:34:17_
 
 ---
