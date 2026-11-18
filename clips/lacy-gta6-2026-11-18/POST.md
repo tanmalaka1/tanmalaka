@@ -2,7 +2,7 @@
 
 Stream: https://www.twitch.tv/videos/2932194507
 
-3 h 56 min of stream -> 4 clip(s) in 7 min (look up 0 s, download audio 1 min, listen 0 s, pick 0 s, make clips 6 min)
+3 h 56 min of stream -> 4 clip(s) in 6 min (look up 0 s, download audio 0 s, listen 0 s, pick 0 s, make clips 6 min)
 
 ## 01_lacy-first-look-at-gta-6-map.mp4
 **LACY opens the GTA 6 MAP for the first time 😳** · first_reaction · 36 s · score 86
