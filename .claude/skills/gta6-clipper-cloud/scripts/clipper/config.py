@@ -25,6 +25,7 @@ DEFAULTS = {
     "chat_timeout": 420,
 
     # --- picking moments ---
+    "focus": "gta6",                 # gta6 | general (any stream: IRL, travel, other games)
     "clips_per_stream": 3,
     "min_duration": 15,
     "max_duration": 60,

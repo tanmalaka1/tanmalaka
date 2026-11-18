@@ -12,9 +12,7 @@ import numpy as np
 from .util import clean_env, log
 
 PROMPT = """You clip livestreams for TikTok, Reels and YouTube Shorts and you are paid per \
-view. This is part of a stream by {streamer}, titled "{title}". The game is GTA 6 \
-(Grand Theft Auto VI), the biggest game launch in years, so moments about GTA 6 travel \
-furthest.
+view. This is part of a stream by {streamer}, titled "{title}". {focus_intro}
 
 Below is a timestamped transcript (seconds). It mixes the streamer's voice with game, \
 trailer and video audio, so judge who is talking from context. Markers on a line:
@@ -22,13 +20,7 @@ trailer and video audio, so judge who is talking from context. Markers on a line
 - [CHAT xN] chat was moving N times faster than usual (the audience reacted)
 Markers are strong hints, not proof: a loud gunshot is not a reaction.
 
-Find the {want} STRONGEST standalone clips in this excerpt. What wins for GTA 6:
-- first_reaction: the first time they see or play something in GTA 6, their honest first words
-- discovery: they find or notice something crazy, hidden or unexpected in the game
-- reaction: an insane reaction, losing it, screaming, speechless, jumping out of the chair
-- funny: a fail, a chaotic moment, a roast, a bit that makes people send it to a friend
-- take: a strong opinion about GTA 6 (best game ever, this is a scam, worth the wait...)
-
+Find the {want} STRONGEST standalone clips in this excerpt. {focus_kinds}
 A clip works when it opens on the hook (never on "uh so yeah"), makes sense with zero \
 context, and pays off before it ends. Reject: menus, loading, reading donations, \
 sponsor reads, quiet stretches, anything whose payoff is outside this excerpt.
@@ -41,9 +33,9 @@ Rules:
 Return ONLY a JSON array, no prose, no code fence:
 [{{"start": 1312.5, "end": 1349.0, "kind": "reaction",
   "title": "short internal name",
-  "hook_text": "TIM sees the GTA 6 MAP for the FIRST TIME 😭",
+  "hook_text": "{ex_hook}",
   "caption": "a post caption that drives comments, under 150 chars",
-  "hashtags": ["#gta6", "#gtavi", "#timthetatman"],
+  "hashtags": {ex_tags},
   "score": 88,
   "reason": "one sentence on why this will hold attention"}}]
 
@@ -56,6 +48,33 @@ No "INSANE MOMENT YOU WON'T BELIEVE" clickbait without specifics.
 TRANSCRIPT:
 {transcript}
 """
+
+
+FOCUS = {
+    "gta6": dict(
+        focus_intro="The game is GTA 6 (Grand Theft Auto VI), the biggest game launch in "
+                    "years, so moments about GTA 6 travel furthest.",
+        focus_kinds="What wins for GTA 6:\n"
+            "- first_reaction: the first time they see or play something in GTA 6, their honest first words\n"
+            "- discovery: they find or notice something crazy, hidden or unexpected in the game\n"
+            "- reaction: an insane reaction, losing it, screaming, speechless, jumping out of the chair\n"
+            "- funny: a fail, a chaotic moment, a roast, a bit that makes people send it to a friend\n"
+            "- take: a strong opinion about GTA 6 (best game ever, this is a scam, worth the wait...)\n",
+        ex_hook="TIM sees the GTA 6 MAP for the FIRST TIME 😭",
+        ex_tags='["#gta6", "#gtavi", "#timthetatman"]'),
+    "general": dict(
+        focus_intro="It can be any kind of stream (IRL, travel, games, challenges, collabs), "
+                    "so judge what would go viral for this streamer's audience.",
+        focus_kinds="What wins:\n"
+            "- reaction: an insane reaction, losing it, screaming, speechless, running, jumping\n"
+            "- funny: a fail, chaos, a roast, a bit that makes people send it to a friend\n"
+            "- wholesome: a genuinely sweet or emotional moment with fans, family or strangers\n"
+            "- discovery: something crazy or unexpected happens or shows up on stream\n"
+            "- interaction: a wild exchange with a fan, a stranger, a celebrity or a guest\n"
+            "- take: a strong, quotable opinion or hot take\n",
+        ex_hook="SPEED gets CHASED by fans in Tokyo 😭",
+        ex_tags='["#ishowspeed", "#speed", "#viral"]'),
+}
 
 
 def _lines(words, loud, chat, cfg, line_seconds=8):
@@ -189,7 +208,8 @@ def find(scan, loud_rel, chat, workdir, cfg, stream):
         lo, hi, body = chunk
         prompt = PROMPT.format(
             streamer=stream["name"], title=stream["title"], want=want, lo=lo, hi=hi,
-            min_d=cfg["min_duration"], max_d=cfg["max_duration"], transcript=body)
+            min_d=cfg["min_duration"], max_d=cfg["max_duration"], transcript=body,
+            **FOCUS.get(cfg.get("focus", "gta6"), FOCUS["gta6"]))
         try:
             got = _parse(_ask(prompt, cfg))
         except (RuntimeError, subprocess.TimeoutExpired) as exc:
