@@ -8,6 +8,57 @@ from pathlib import Path
 
 from .util import log, run
 
+import urllib.request
+from concurrent.futures import ThreadPoolExecutor
+
+
+def _hls_url(url, fmt, args):
+    out = run(["yt-dlp", "--no-playlist", "-f", fmt, "--get-url", *args, url], timeout=300)
+    text = out if isinstance(out, str) else getattr(out, "stdout", "")
+    return [l for l in text.splitlines() if l.startswith("http")][0]
+
+
+def _hls_section(m3u8, start, end, dest, workdir_name="hls"):
+    """Fetch only the HLS segments covering [start, end] and cut them exactly. Works on
+    Twitch VODs that are still live, where ffmpeg would follow the playlist in real time."""
+    base = m3u8.rsplit("/", 1)[0]
+    text = urllib.request.urlopen(m3u8, timeout=60).read().decode()
+    segs, t, dur = [], 0.0, None
+    for line in text.splitlines():
+        if line.startswith("#EXTINF:"):
+            dur = float(line[8:].split(",")[0])
+        elif line and not line.startswith("#") and dur is not None:
+            if t + dur > start - 1 and t < end + 1:
+                segs.append((t, line if line.startswith("http") else f"{base}/{line}"))
+            t += dur
+            dur = None
+    if not segs:
+        raise RuntimeError(f"no stream segments cover {start:.0f}-{end:.0f}s")
+    tmp = dest.parent / (dest.stem + "_segs")
+    tmp.mkdir(parents=True, exist_ok=True)
+
+    def get(i_seg):
+        i, (_, u) = i_seg
+        f = tmp / f"{i:05d}.ts"
+        for _ in range(4):
+            try:
+                f.write_bytes(urllib.request.urlopen(u, timeout=60).read())
+                return f
+            except Exception:
+                continue
+        raise RuntimeError(f"segment download failed: {u}")
+
+    with ThreadPoolExecutor(8) as pool:
+        files = list(pool.map(get, enumerate(segs)))
+    lst = tmp / "list.txt"
+    lst.write_text("".join(f"file '{f}'\n" for f in files))
+    off = start - segs[0][0]
+    run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", str(lst),
+         "-ss", f"{off:.3f}", "-t", f"{end - start:.3f}",
+         "-c:v", "libx264", "-preset", "veryfast", "-crf", "16", "-c:a", "aac", "-b:a", "192k",
+         "-movflags", "+faststart", str(dest)], timeout=1800)
+    shutil.rmtree(tmp, ignore_errors=True)
+
 
 def base_args(url, cookies=None, cookies_file=None):
     """JS runtime for YouTube (else yt-dlp quietly drops good formats) + browser cookies."""
@@ -65,6 +116,11 @@ def section(url, args, start, end, dest, cfg):
     h = cfg["max_height"]
     for leftover in glob.glob(str(dest) + "*"):
         Path(leftover).unlink(missing_ok=True)
+    if "twitch.tv" in url:
+        m3u8 = _hls_url(url, f"b[height<={h}]/b", args)
+        _hls_section(m3u8, start, end, dest)
+        if dest.exists() and dest.stat().st_size > 10000:
+            return dest
     run([
         "yt-dlp", "--no-playlist",
         "-f", f"bv*[height<={h}]+ba/b[height<={h}]/bv*+ba/b",
