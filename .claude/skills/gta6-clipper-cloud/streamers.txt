@@ -1,0 +1,13 @@
+# Streamers to check for new GTA streams. One per line: platform:name
+# twitch:<login>   youtube:@handle   (Kick: paste links by hand, with --cookies chrome)
+# Only VODs from the last 36 hours with "GTA" in the title are picked.
+twitch:kaicenat
+twitch:xqc
+twitch:timthetatman
+twitch:summit1g
+twitch:lirik
+twitch:hasanabi
+twitch:zackrawrr
+twitch:caseoh_
+twitch:jynxzi
+twitch:ludwig

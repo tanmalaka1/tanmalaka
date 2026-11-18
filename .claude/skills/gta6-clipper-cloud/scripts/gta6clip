@@ -1,0 +1,11 @@
+#!/bin/bash
+# gta6clip launcher: runs the clipper inside its own private Python env.
+ENV="$HOME/.gta6-clipper/venv"
+HERE="$(cd "$(dirname "$0")" && pwd)"
+if [ ! -x "$ENV/bin/python" ]; then
+  echo "Not set up yet. Run:  bash \"$HERE/setup.sh\"" >&2
+  exit 1
+fi
+export PATH="$ENV/bin:$PATH"
+# OpenCV and PyAV both bundle libavdevice; macOS prints a harmless duplicate-class warning. Hide it.
+exec "$ENV/bin/python" "$HERE/run.py" "$@" 2> >(grep -v -e "^objc\[" -e "One of the duplicates" >&2)
