@@ -20,7 +20,7 @@ YCbCr Matrix: TV.709
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, \
 BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, \
 BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Pop,{font},{size},{primary},{primary},&H00000000,&H96000000,-1,0,0,0,100,100,0,0,\
+Style: Pop,{font},{size},{primary},{primary},&H00000000,&H96000000,{bold},0,0,0,100,100,{spacing},0,\
 1,{outline},3,2,70,70,{marginv},1
 
 [Events]
@@ -75,6 +75,7 @@ def build(words, start, end, path, cfg):
     lines = [HEADER.format(
         w=cfg["output_width"], h=cfg["output_height"],
         font=cfg["font"], size=cfg["font_size"],
+        bold=-1 if cfg.get("font_bold", True) else 0, spacing=cfg.get("font_spacing", 0),
         primary=primary, outline=cfg["outline_width"], marginv=marginv,
     )]
 

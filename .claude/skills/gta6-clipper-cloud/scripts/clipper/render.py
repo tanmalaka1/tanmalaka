@@ -2,6 +2,7 @@
 frame, write exact captions, frame it 9:16, add the title bar, encode."""
 
 import json
+from pathlib import Path
 
 import numpy as np
 
@@ -78,7 +79,9 @@ def finish(p, outdir, workdir, cfg, known):
     ass = captions.build(p["words"], 0.0, dur, workdir / f"{name}.ass", cfg)
     chain, look, cam_h = layout.graph(part, p["offset"], p["offset"] + dur, cfg, p["info"],
                                       known=known, analysis=p["analysis"])
-    chain += f";[vout]ass=f='{_esc(ass)}'[v]"
+    fonts = Path.home() / ".gta6-clipper" / "fonts"   # extra caption fonts (Google Fonts)
+    fdir = f":fontsdir='{_esc(fonts)}'" if fonts.is_dir() else ""
+    chain += f";[vout]ass=f='{_esc(ass)}'{fdir}[v]"
     cmd = ["ffmpeg", "-y", "-v", "error", "-nostdin", "-ss", f"{p['offset']:.3f}", "-t", f"{dur:.3f}",
            "-i", str(part)]
     if m.get("hook_text"):
