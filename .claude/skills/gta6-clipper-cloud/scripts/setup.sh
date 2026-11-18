@@ -49,9 +49,15 @@ print("\033[32m✓\033[0m Whisper models (tiny = listening, base = captions)")
 PY
 
 mkdir -p "$ENV_DIR/models"
-if [ ! -s "$ENV_DIR/models/yunet.onnx" ]; then
-  curl -sL -o "$ENV_DIR/models/yunet.onnx" \
-    "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx"
+YUNET="$ENV_DIR/models/yunet.onnx"
+# A model under 100 KB is an error page saved by mistake, not the model: fetch it again.
+[ -f "$YUNET" ] && [ "$(wc -c < "$YUNET")" -lt 100000 ] && rm -f "$YUNET"
+if [ ! -s "$YUNET" ]; then
+  for u in "https://huggingface.co/opencv/face_detection_yunet/resolve/main/face_detection_yunet_2023mar.onnx" \
+           "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx"; do
+    curl -sfL -o "$YUNET" "$u" && [ "$(wc -c < "$YUNET")" -gt 100000 ] && break
+    rm -f "$YUNET"
+  done
 fi
 [ -s "$ENV_DIR/models/yunet.onnx" ] && ok "facecam finder (OpenCV YuNet, 0.2 MB)" || echo "! facecam model download failed; clips fall back to a simpler face finder"
 
