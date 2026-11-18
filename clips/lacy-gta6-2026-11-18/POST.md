@@ -2,7 +2,19 @@
 
 Stream: https://www.twitch.tv/videos/2932194507
 
-3 h 30 min of stream -> 3 clip(s) in 13 min (look up 0 s, download audio 0 s, listen 6 min, pick 1 min, make clips 6 min)
+3 h 56 min of stream -> 4 clip(s) in 7 min (look up 0 s, download audio 1 min, listen 0 s, pick 0 s, make clips 6 min)
+
+## 01_lacy-first-look-at-gta-6-map.mp4
+**LACY opens the GTA 6 MAP for the first time 😳** · first_reaction · 36 s · score 86
+
+His reaction when he saw how BIG the GTA 6 map is… is it bigger than GTA 5? 👀
+
+#gta6 #gtavi #lacy #gta6map #grandtheftauto
+
+_Why: Everyone wants to see the GTA 6 map, and his stunned 'whoa whoa whoa' and 'the map is huge' land in the first 10 seconds._
+_From the stream at 1:13:01_
+
+---
 
 ## 02_gta-6-launch-countdown-to-zero.mp4
 **Lacy counts down the LAST SECONDS before GTA 6 drops 😭** · reaction · 57 s · score 84
