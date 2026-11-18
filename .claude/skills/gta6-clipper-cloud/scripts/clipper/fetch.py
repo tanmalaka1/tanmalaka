@@ -18,7 +18,7 @@ def _hls_url(url, fmt, args):
     return [l for l in text.splitlines() if l.startswith("http")][0]
 
 
-def _hls_section(m3u8, start, end, dest, workdir_name="hls"):
+def _hls_section(m3u8, start, end, dest, audio_only=False):
     """Fetch only the HLS segments covering [start, end] and cut them exactly. Works on
     Twitch VODs that are still live, where ffmpeg would follow the playlist in real time."""
     base = m3u8.rsplit("/", 1)[0]
@@ -52,11 +52,15 @@ def _hls_section(m3u8, start, end, dest, workdir_name="hls"):
         files = list(pool.map(get, enumerate(segs)))
     lst = tmp / "list.txt"
     lst.write_text("".join(f"file '{f}'\n" for f in files))
-    off = start - segs[0][0]
-    run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", str(lst),
-         "-ss", f"{off:.3f}", "-t", f"{end - start:.3f}",
-         "-c:v", "libx264", "-preset", "veryfast", "-crf", "16", "-c:a", "aac", "-b:a", "192k",
-         "-movflags", "+faststart", str(dest)], timeout=1800)
+    if audio_only:      # the whole stream, untouched
+        run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", str(lst),
+             "-vn", "-c:a", "copy", str(dest)], timeout=1800)
+    else:
+        off = start - segs[0][0]
+        run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", str(lst),
+             "-ss", f"{off:.3f}", "-t", f"{end - start:.3f}",
+             "-c:v", "libx264", "-preset", "veryfast", "-crf", "16", "-c:a", "aac", "-b:a", "192k",
+             "-movflags", "+faststart", str(dest)], timeout=1800)
     shutil.rmtree(tmp, ignore_errors=True)
 
 
@@ -100,6 +104,14 @@ def audio(url, args, workdir):
         log(f"reusing downloaded audio ({done[0].stat().st_size / 1e6:.0f} MB)", "ok")
         return done[0]
     log("downloading the stream's audio (video comes later, only for the clips)...", "step")
+    if "twitch.tv" in url:
+        # Segments in parallel: fast, and a still-live VOD doesn't download in real time.
+        for leftover in workdir.glob("audio.*"):
+            leftover.unlink(missing_ok=True)
+        dest = workdir / "audio.m4a"
+        _hls_section(_hls_url(url, "Audio_Only/ba/worst", args), 0, 10 ** 9, dest, audio_only=True)
+        log(f"audio: {dest.stat().st_size / 1e6:.0f} MB", "ok")
+        return dest
     run(["yt-dlp", "--no-playlist", "-f", "ba/wa/w", "-o", str(workdir / "audio.%(ext)s"),
          "--newline", "-N", "4", *args, url], timeout=7200)
     done = [p for p in workdir.glob("audio.*") if not p.name.endswith((".part", ".ytdl"))]
