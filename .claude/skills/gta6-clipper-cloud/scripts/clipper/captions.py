@@ -110,7 +110,10 @@ def build(words, start, end, path, cfg):
 
             rendered = []
             for j, text in enumerate(texts):
-                if j == index:
+                if j == index and len(texts) == 1:
+                    # One word at a time: the word itself is the caption, keep it white.
+                    rendered.append(f"{{{pop}}}{text}" if pop else text)
+                elif j == index:
                     rendered.append(f"{{\\c{highlight}&{pop}}}{text}{{\\c{primary}&{unpop}}}")
                 else:
                     rendered.append(text)
