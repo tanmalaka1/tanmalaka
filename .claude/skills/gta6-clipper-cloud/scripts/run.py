@@ -46,6 +46,8 @@ def parse(argv):
     p.add_argument("--fast", action="store_true", help="Mac hardware encoding (much faster)")
     p.add_argument("--keep-audio", action="store_true", help="keep the stream audio after clipping")
     p.add_argument("--redo", action="store_true", help="pick the moments again (keeps the audio)")
+    p.add_argument("--no-captions", dest="no_captions", action="store_true",
+                   help="no word-by-word subtitles on the clips (title bar stays)")
     p.add_argument("--pick-only", dest="pick_only", action="store_true",
                    help="find and score moments, show the shortlist, make no clips")
     p.add_argument("--choose", metavar="N,N,...",
@@ -171,6 +173,7 @@ def main(argv=None):
         "clips_per_stream": opts.clips, "layout": opts.layout, "claude_model": opts.claude_model,
         "min_duration": opts.min_duration, "max_duration": opts.max_duration,
         "encoder": "h264_videotoolbox" if opts.fast else None,
+        "captions": False if opts.no_captions else None,
     })
     config.HOME.mkdir(parents=True, exist_ok=True)
     free_gb = shutil.disk_usage(config.HOME).free / 1e9

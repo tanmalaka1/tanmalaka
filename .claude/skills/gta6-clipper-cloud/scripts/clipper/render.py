@@ -69,7 +69,9 @@ def prepare(url, args, audio_file, moment, index, workdir, cfg, language):
     offset = min(max(offset, 0.0), max(0.0, info["duration"] - dur))
     if conf < 0.5:
         log(f"  sound match weak ({conf:.2f}) -> trusting the requested times", "warn")
-    words, _ = scan.words_from(cfg["caption_model"], pcm(part, 16000, offset, dur), language)
+    words = []
+    if cfg.get("captions", True):
+        words, _ = scan.words_from(cfg["caption_model"], pcm(part, 16000, offset, dur), language)
     return {"index": index, "name": name, "moment": moment, "part": part, "info": info,
             "offset": offset, "dur": dur, "words": words,
             "analysis": layout.analyze(part, offset, offset + dur, info)}
@@ -87,12 +89,12 @@ def finish(p, outdir, workdir, cfg, known):
     dest = outdir / f"{name}.mp4"
     tmp_out = outdir / f".{name}.encoding.mp4"
     log(f"[clip {p['index']}] framing + encoding", "step")
-    ass = captions.build(p["words"], 0.0, dur, workdir / f"{name}.ass", cfg)
+    ass = captions.build(p["words"], 0.0, dur, workdir / f"{name}.ass", cfg) if cfg.get("captions", True) else None
     chain, look, cam_h = layout.graph(part, p["offset"], p["offset"] + dur, cfg, p["info"],
                                       known=known, analysis=p["analysis"])
     fonts = Path.home() / ".gta6-clipper" / "fonts"   # extra caption fonts (Google Fonts)
     fdir = f":fontsdir='{_esc(fonts)}'" if fonts.is_dir() else ""
-    chain += f";[vout]ass=f='{_esc(ass)}'{fdir}[v]"
+    chain += f";[vout]ass=f='{_esc(ass)}'{fdir}[v]" if ass else ";[vout]null[v]"
     cmd = ["ffmpeg", "-y", "-v", "error", "-nostdin", "-ss", f"{p['offset']:.3f}", "-t", f"{dur:.3f}",
            "-i", str(part)]
     if m.get("hook_text"):

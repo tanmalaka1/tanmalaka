@@ -2,6 +2,7 @@
 and, on YouTube replays, how fast chat was moving. All local, all free."""
 
 import json
+from pathlib import Path
 import subprocess
 
 import threading
@@ -75,7 +76,8 @@ def transcript(audio_path, lo, hi, workdir, cfg):
 def loudness(audio_path, workdir):
     """Loudness per second in dB, streamed through ffmpeg so it never loads the whole file."""
     cache = workdir / "loud.json"
-    if cache.exists():
+    # Reuse only if it was measured from this very audio file (a re-download is newer).
+    if cache.exists() and cache.stat().st_mtime >= Path(audio_path).stat().st_mtime:
         return json.loads(cache.read_text())
     rate = 8000
     proc = subprocess.Popen(
