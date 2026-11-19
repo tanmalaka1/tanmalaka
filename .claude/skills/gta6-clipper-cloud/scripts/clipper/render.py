@@ -85,6 +85,7 @@ def finish(p, outdir, workdir, cfg, known):
     """Frame, title, caption and encode one prepared clip."""
     m, dur, part, name = p["moment"], p["dur"], p["part"], p["name"]
     dest = outdir / f"{name}.mp4"
+    tmp_out = outdir / f".{name}.encoding.mp4"
     log(f"[clip {p['index']}] framing + encoding", "step")
     ass = captions.build(p["words"], 0.0, dur, workdir / f"{name}.ass", cfg)
     chain, look, cam_h = layout.graph(part, p["offset"], p["offset"] + dur, cfg, p["info"],
@@ -105,8 +106,9 @@ def finish(p, outdir, workdir, cfg, known):
     speech = "[0:a]loudnorm=I=-14:TP=-1.5:LRA=11[a]" if cfg["loudnorm"] else "[0:a]anull[a]"
     cmd += ["-filter_complex", f"{chain};{speech}", "-map", "[v]", "-map", "[a]",
             "-c:a", "aac", "-b:a", cfg["audio_bitrate"], "-ar", "48000",
-            *_video_args(cfg), "-movflags", "+faststart", str(dest)]
+            *_video_args(cfg), "-movflags", "+faststart", str(tmp_out)]
     run(cmd, timeout=1800)
+    tmp_out.replace(dest)        # only a finished encode ever gets the clip's name
     part.unlink(missing_ok=True)
     log(f"  -> {dest.name} ({look} layout)", "ok")
     return {
@@ -118,7 +120,17 @@ def finish(p, outdir, workdir, cfg, known):
 
 
 def post_sheet(outdir, stream, clips, summary):
-    """POST.md: what to paste under each clip, plus where it came from."""
+    """POST.md: what to paste under each clip, plus where it came from. Clips made
+    earlier into the same folder stay listed, so choosing more later adds to it."""
+    old = outdir / "clips.json"
+    if old.exists():
+        try:
+            new_files = {c["file"] for c in clips}
+            kept = [c for c in json.loads(old.read_text()).get("clips", [])
+                    if c["file"] not in new_files and (outdir / c["file"]).exists()]
+            clips = sorted(kept + list(clips), key=lambda c: c["file"])
+        except (ValueError, KeyError):
+            pass
     lines = [f"# {stream['name']}: {stream['title']}", "", f"Stream: {stream['url']}", "",
              summary, ""]
     for c in clips:

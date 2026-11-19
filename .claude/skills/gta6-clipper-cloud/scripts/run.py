@@ -103,7 +103,8 @@ def one_stream(url, cfg, opts):
         bad = [n for n in nums if not 1 <= n <= len(short)]
         if bad:
             raise RuntimeError(f"no shortlist number(s) {bad}; the shortlist has 1-{len(short)}")
-        (pick_dir / "moments.json").write_text(json.dumps([short[n - 1] for n in nums], indent=2))
+        chosen = [dict(short[n - 1], number=n) for n in nums]     # keep the shortlist number
+        (pick_dir / "moments.json").write_text(json.dumps(chosen, indent=2))
     elif opts.pick_only:
         (pick_dir / "moments.json").unlink(missing_ok=True)
     with timer.stage("pick"):
@@ -131,6 +132,7 @@ def one_stream(url, cfg, opts):
     made, ready, known = [], [], {}
     with timer.stage("make clips"):
         for i, m in enumerate(picked, 1):
+            i = int(m.get("number", i))
             try:
                 ready.append(render.prepare(url, args, audio, m, i, pick_dir, cfg,
                                             heard.get("language")))
