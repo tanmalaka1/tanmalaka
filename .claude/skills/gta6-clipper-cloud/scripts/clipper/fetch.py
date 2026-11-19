@@ -132,6 +132,7 @@ def section(url, args, start, end, dest, cfg):
         m3u8 = _hls_url(url, f"b[height<={h}]/b", args)
         _hls_section(m3u8, start, end, dest)
         if dest.exists() and dest.stat().st_size > 10000:
+            _check_height(dest, h)
             return dest
     run([
         "yt-dlp", "--no-playlist",
@@ -142,4 +143,14 @@ def section(url, args, start, end, dest, cfg):
     ], timeout=1800)
     if not dest.exists():
         raise RuntimeError(f"no video came back for {start:.0f}-{end:.0f}s")
+    _check_height(dest, h)
     return dest
+
+
+def _check_height(path, want):
+    """Clips should be cut from 1080p: say so loudly when the source is lower."""
+    out = run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+               "stream=height", "-of", "csv=p=0", str(path)], check=False).strip()
+    if out.isdigit() and int(out) < want:
+        log(f"source video is only {out}p (wanted {want}p): this stream isn't available "
+            f"in {want}p, the clip will be softer", "warn")

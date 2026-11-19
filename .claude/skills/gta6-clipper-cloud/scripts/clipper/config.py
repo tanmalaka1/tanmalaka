@@ -60,7 +60,7 @@ DEFAULTS = {
 
     # --- encoding ---
     "encoder": "libx264",            # or h264_videotoolbox (Mac hardware, much faster)
-    "crf": 20,
+    "crf": 18,                       # lower = sharper; 18 keeps 1080p crisp after TikTok/Reels recompress
     "preset": "medium",
     "audio_bitrate": "192k",
     "loudnorm": True,
