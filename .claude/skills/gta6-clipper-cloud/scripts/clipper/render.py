@@ -50,11 +50,21 @@ def prepare(url, args, audio_file, moment, index, workdir, cfg, language):
     dur = end - start
     name = f"{index:02d}_{slugify(moment.get('title') or moment.get('hook_text'))}"
     log(f"[clip {index}] {moment.get('hook_text', '')}  ({dur:.0f} s)", "step")
-    part = fetch.section(url, args, start - PAD, end + PAD, workdir / f"part_{index:02d}.mp4", cfg)
+    part_file = workdir / f"part_{index:02d}.mp4"
+    part = fetch.section(url, args, start - PAD, end + PAD, part_file, cfg)
     info = probe(part)
     if not info["width"]:
         raise RuntimeError("the downloaded part has no picture")
-    at, conf = locate(part, audio_file, start - PAD)
+    # Search wide: the stream audio's timeline can drift from the video's over many hours.
+    # If the part came from the wrong spot, fetch the right one instead of clipping it.
+    at, conf = locate(part, audio_file, start - PAD, search=150.0)
+    shift = at - (start - PAD)
+    if conf >= 0.5 and abs(shift) > 1.5:
+        log(f"  video and audio timelines differ by {shift:+.1f} s -> fetching the matching part", "warn")
+        part_file.unlink(missing_ok=True)
+        part = fetch.section(url, args, start - PAD - shift, end + PAD - shift, part_file, cfg)
+        info = probe(part)
+        at, conf = locate(part, audio_file, start - PAD)
     offset = start - at if conf >= 0.5 else PAD
     offset = min(max(offset, 0.0), max(0.0, info["duration"] - dur))
     if conf < 0.5:

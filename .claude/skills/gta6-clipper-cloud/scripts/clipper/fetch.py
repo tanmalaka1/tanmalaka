@@ -53,8 +53,14 @@ def _hls_section(m3u8, start, end, dest, audio_only=False):
     lst = tmp / "list.txt"
     lst.write_text("".join(f"file '{f}'\n" for f in files))
     if audio_only:      # the whole stream, untouched
-        run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", str(lst),
-             "-vn", "-c:a", "copy", str(dest)], timeout=1800)
+        # Join the raw .ts bytes: the stream's own timestamps carry through, so the audio
+        # matches the VOD to the frame. (ffmpeg's concat demuxer adds ~3.75 s per hour.)
+        joined = tmp / "all.ts"
+        with open(joined, "wb") as out:
+            for f in files:
+                out.write(f.read_bytes())
+        run(["ffmpeg", "-y", "-v", "error", "-i", str(joined), "-vn", "-c:a", "copy", str(dest)],
+            timeout=1800)
     else:
         off = start - segs[0][0]
         run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", str(lst),
