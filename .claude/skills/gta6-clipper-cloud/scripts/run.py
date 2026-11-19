@@ -46,6 +46,10 @@ def parse(argv):
     p.add_argument("--fast", action="store_true", help="Mac hardware encoding (much faster)")
     p.add_argument("--keep-audio", action="store_true", help="keep the stream audio after clipping")
     p.add_argument("--redo", action="store_true", help="pick the moments again (keeps the audio)")
+    p.add_argument("--pick-only", dest="pick_only", action="store_true",
+                   help="find and score moments, show the shortlist, make no clips")
+    p.add_argument("--choose", metavar="N,N,...",
+                   help="make clips only for these shortlist numbers (from --pick-only)")
     return p.parse_args(argv)
 
 
@@ -80,7 +84,7 @@ def one_stream(url, cfg, opts):
     pick_dir = work if not opts.section else work / f"part_{int(lo)}_{int(hi)}"
     pick_dir.mkdir(exist_ok=True)
     if opts.redo:
-        for f in ("moments.json", "candidates.json"):
+        for f in ("moments.json", "candidates.json", "shortlist.json"):
             (pick_dir / f).unlink(missing_ok=True)
     log(f"{info['title'][:70]}  ·  {minutes(length)} of stream"
         + (f", clipping {hhmmss(lo)}-{hhmmss(hi)}" if opts.section else ""), "ok")
@@ -90,8 +94,36 @@ def one_stream(url, cfg, opts):
         loud = scan.relative(scan.loudness(audio, work))
         chat = scan.chat_rate(url, args, work, cfg, info)
     stream = {"name": info["name"], "title": info["title"], "url": url}
+    shortlist_file = pick_dir / "shortlist.json"
+    if opts.choose:
+        if not shortlist_file.exists():
+            raise RuntimeError("no shortlist yet: run with --pick-only first")
+        short = json.loads(shortlist_file.read_text())
+        nums = [int(n) for n in re.findall(r"\d+", opts.choose)]
+        bad = [n for n in nums if not 1 <= n <= len(short)]
+        if bad:
+            raise RuntimeError(f"no shortlist number(s) {bad}; the shortlist has 1-{len(short)}")
+        (pick_dir / "moments.json").write_text(json.dumps([short[n - 1] for n in nums], indent=2))
+    elif opts.pick_only:
+        (pick_dir / "moments.json").unlink(missing_ok=True)
     with timer.stage("pick"):
+        if opts.pick_only:
+            cfg = dict(cfg, clips_per_stream=cfg.get("shortlist_size", 15))
         picked = moments.find(heard, loud, chat, pick_dir, cfg, stream)
+    if opts.pick_only:
+        picked = sorted(picked, key=lambda m: -float(m.get("score", 0)))
+        shortlist_file.write_text(json.dumps(picked, indent=2))
+        (pick_dir / "moments.json").unlink(missing_ok=True)
+        print()
+        log(f"shortlist: {len(picked)} moment(s), best first. Make clips with --choose N,N,...", "ok")
+        for n, m in enumerate(picked, 1):
+            print(f"  {n:>2}. [{int(float(m.get('score', 0)))}] {hhmmss(float(m['start']))} "
+                  f"{float(m['end']) - float(m['start']):.0f}s {m.get('kind', '')}: {m.get('hook_text', '')}")
+            if m.get("reason"):
+                print(f"      {m['reason']}")
+        set_tag("")
+        return {"name": info["name"], "title": info["title"], "outdir": pick_dir, "clips": [],
+                "summary": f"shortlist of {len(picked)} in {shortlist_file}"}
 
     day = datetime.date.today().isoformat()
     outdir = config.HOME / day / f"{slugify(info['name'], 24)}__{slugify(info['title'], 40)}"
