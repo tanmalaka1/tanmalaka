@@ -11,7 +11,7 @@ mkdir -p "$OUT"
 dl() {
   # $1=id  $2=name  $3=start  $4=end
   if [ -n "$ONLY" ] && [ "$ONLY" != "$1" ]; then return; fi
-  yt-dlp -f "bv*[height<=1080]+ba/b" \
+  yt-dlp --cookies "${COOKIES:-cookies.txt}" -f "bv*[height<=1080]+ba/b" \
     --download-sections "*$3-$4" --force-keyframes-at-cuts \
     --merge-output-format mp4 \
     -o "$OUT/$1_$2.%(ext)s" "$URL"
